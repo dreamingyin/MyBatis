@@ -1,0 +1,181 @@
+I.MyBatis和hibernate本质区别与应用场景
+	1.Hibernate：是一个标准的ORM框架(对象关系映射)，不需要写sql，自动生成sql
+	     使用hibernate对SQL优化修改比较困难
+	     应用场景：
+	       适用于需求不多的中小型项目：比如后台管理系统：erp、orm、OA
+	2.MyBatis:专注sql本身，需要程序员自己编写sql语句，方便的对sql进行优化，mybatis
+	  是一个不完全的ORM框架，MyBatis可以实现映射(输入映射、输出映射)
+	   应用场景：
+	       适用于需求变化较多 的项目：互联网项目
+II.MyBatis开发Dao的方法
+	1.SqlSession的使用范围
+	 1.1 SqlSessionFactoryBuilder:用来创建SqlSessionFactory,只需要把SqlSessionfactoryBuilder当成一个工具类来使用
+	 1.2 SqlSessionFactory:通过SqlSessionFactory来创建SqlSession,通过单例模式管理
+	 	 SqlSesssionFactory(一旦创建不在销毁，一直使用此实例)
+	 	  将来Mybatis
+	 1.3 SqlSession:面向用户(程序员)的接口,，里面提共了很多方法，selectOne和selectList
+	2.原始Dao开发方式(程序员需要编写Dao及其Dao实现类)
+	 2.1 思路:编写Dao及其Dao实现类，需要向Dao中注入SqlSessionFactory,在方法体内创建通过SqlSessionFactory创建SqlSession
+	 	2.1.1 Dao接口
+				 	public interface StudentDao {
+			
+						//根据ID查询学生信息
+						public Student findById(int id) throws Exception;
+						
+						//添加用户信息 
+						public void insertStudent(Student student) throws Exception;
+						
+						//删除学生信息
+						public void deleteStudent(int id) throws Exception;
+					}
+	 	2.1.2 Dao实现类
+		 	private SqlSessionFactory sqlSessionFactory;
+			public StudentDaoImpl(SqlSessionFactory sqlSessionFactory){
+				this.sqlSessionFactory=sqlSessionFactory;
+			}
+			
+			@Override
+			public Student findById(int id) throws Exception {
+				// TODO Auto-generated method stub
+				SqlSession sqlSession=sqlSessionFactory.openSession();
+				Student stu=sqlSession.selectOne("test.findStudentByName",id);
+				sqlSession.close();
+				return stu;
+			}
+		2.1.3 总结原始Dao开发问题
+			1.Dao接口实现类中有大量重复的模板方法，设想将重复的模板方法提取出来，大大减轻程序员的工作量
+			2.在调用SqlSession方法中将statement硬编码
+			3.调用SqlSession方法传入变量，由于sqlsession方法使用泛型，即使传入参数类型错误在编译阶段也不会报错，不利于程序员开发
+	
+	3.mapper代理方式(程序员只需mapper接口(相当于Dao的接口))
+	
+		3.1   思路：1.程序员只需要写mapper接口(相当于Dao接口),mybatis可以自动生成mapper接口实现类的代理对象
+				2.程序员需要编写mapper.xml映射文件
+				3.开发规范：1.在mapper.xml中namespace等于mapper接口的地址
+							 <!-- namespace命名空间 ,作用对sql进行分类化管理，理解sql隔离,namespace等于mapper接口地址
+							注意：使用mapper代理的方法进行开发，namespace具有特殊的意义
+							-->
+							<mapper namespace="top.haoyeyin.mapper.StudentMapper">
+						 2.mapper接口中方法名和mapper.xml中的statement中的id一致
+						 3.mapper.java接口中的输入参数类型和mapper.xml中statement的parameterType的指定类型一致
+						 4.mapper.java接口中方法的返回类型和mapper.xml中resultType指定的类型一致
+						 public Student findStudentById(int id) throws Exception;
+				总结：1.mapper.java public interface StudentMapper {
+						//根据ID查询学生信息
+						public Student findStudentById(int id) throws Exception;
+					2.mapper.xml  <mapper namespace="top.haoyeyin.mapper.StudentMapper">
+						<!-- 映射文件中配置多种sql语句 -->
+						<!-- 通过select语句查询，id用于标识映射文件中的sql,所以id为statement的ID
+							 将来sql语句封装到mapperstatement对象中
+							 paramterType:指定输入参数类型，这里ID指定int型
+							 #{}:占位符
+							 #{id}:id表示输入的参数，id是参数名称，如果输入是简单类型#{}中的参数名可以任意，可以是
+							 value或其名称
+							 resultType:指定sql输出结果对应映射java对象，select指定的 resulType表示单条记录
+							 所映射的Java对象
+						 -->
+						<select id="findStudentById" parameterType="int" resultType="top.haoyeyin.pojo.Student">
+							 select * from student where id=#{id}
+						</select>
+					3.测试方法
+	
+	4.MyBatis全局配置文件SqlMapConfig.xml
+		4.1 properties(属性):将数据路连接参数单独的配置在db.properties配置文件中，只需要在
+			SqlMapConfig.xml中加载db.properties的属性值即可，就不需要对数据库的连接参数硬编码
+			将数据配置在db.properties中，原因：方便对参数进行统一的管理,其他的xml文件对其进行引用
+			4.1.1  注意：1.在properties元素体内的属性首先读取
+					  2.然后读取properties元素中resource或url中加载的属性,会覆盖同名的属性
+					  3.最后读取parameterType传递属性，他会覆盖同名的属性
+			4.1.2 建议：不要再properties元素体内添加任何值，只将属性值定义在properties属性文件中
+					    在properties文件中属性名要有一定的含义，例如：jdbc.driver
+		4.2 setting(全局配置参数):全局参数的配置配置
+			可以调整MyBatis框架的一些运行时参数：比如开启二级缓冲、开启延迟加载
+		4.3 typeAliases(类型别名)重点学习
+			4.3.1  需求:在mapper.xml中定义很多statement，statement需要指定parameterType输入
+				     参数类型、需要指定resultType输出结果的映射类型
+				     如果在输入指定类的全路径，不方便进行开发，可以针对parameterType和resultType指定
+				     类型定义一些别名进行开发，在mapper.xml中通过别名来定义，方便开发
+			4.3.2 单个别名的使用：
+			<!-- 定义别名 -->
+		    <typeAliases>
+		    	<!-- 针对单个别名的定义
+		    		type:类型的路径
+		    		alias:别名
+		    	 -->
+		    	<typeAlias type="top.haoyeyin.pojo.Student" alias="student"/>
+		    	<!-- 批量别名的定义
+		    		指定package：MyBatis会在指定包下扫描pojo类,别名就是类名(首字母大小写都可以)
+		    	 -->
+		    </typeAliases>
+		    <!-- 使用定义的别名 -->
+		    <select id="findStudentById" parameterType="int" resultType="student">
+				
+		4.4 typeHandlers(类型处理器)
+		4.5 ObjectFactory(对象工厂)
+		4.6 plugins(插件)
+		4.7 environments(环境集合属性含对象)
+			environment(环境集合子对象)
+			dataSource(数据源)
+		4.8 mapper(映射配置)
+			1.单个映射文件的加载：<!-- 通过resource方法一次加载一个配置文件 -->
+    		<mapper resource="sqlmap/StudentMapper.xml"/>
+    		2.通过mapper接口来加载映射单/多个映射文件
+    			1）加载映射单个映射文件
+	    		<!-- 通过mapper加载单个映射文件
+	    		遵循一些规范,将mapper接口的名称和mapper.xml映射文件名称保持一致，且放置在一个路径下
+	    		 -->
+	    		<mapper class="top.haoyeyin.mapper.StudentMapper"/>	
+    			2)加载多个映射文件(推荐使用)
+	    		<!-- 自动扫描mapper包下的mapper接口加载多个映射文件(更为常用)
+	    		  遵循一些规范,将mapper接口的名称和mapper.xml映射文件名称保持一致，且放置在一个路径下
+	    	 	-->
+	    		<package name="top.haoyeyin.mapper"/>	
+	5.输入映射
+		通过parameterType指定输入参数的类型,类型可以是简单类型、hashmap、pojo包装类型
+		5.1 传递pojo的包装对象
+			5.1.1 需求：完成用户信息的综合查询,需要传入查询条件很复杂(可能包含用户信息、其他信息,
+					    比如商品、订单)
+			5.1.2 定义pojo包装类型
+				 很对上边需求,建议使用自定义包装类型pojo
+				 在pojo中将复杂的查询条件包装进去
+				 public class StudentQueryVo {
+
+				//在这里包装所需要的查询条件
+				
+				//用户的查询条件
+				private StudentCustom studentCustom;
+			
+				public StudentCustom getStudentCustom() {
+					return studentCustom;
+				}
+			
+				public void setStudentCustom(StudentCustom studentCustom) {
+					this.studentCustom = studentCustom;
+				}
+				
+			  }
+			  
+		 5.1.3 mapper.xml
+		 	        在StudentMapper.xml中定义学生信息的综合查询(查询条件复杂，通过高级查询来进行复杂关联查询)
+		 5.1.4 mapper.java
+			
+		
+		
+	6.输出映射
+	7.动态Sql
+		
+					
+			
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE configuration  
+PUBLIC "-//mybatis.org//DTD Config 3.0//EN"  
+"http://mybatis.org/dtd/mybatis-3-config.dtd"> 
+<configuration>
+	<!-- 加载属性文件 -->
+	<properties resource="db.properties"/>
+	<settings>  
+        <setting name="logImpl" value="LOG4J"/>  
+    </settings>
+    <!-- 定义别名 -->
+    <typeAliases>
+    	<!-- 针对单个别名的定义
+    		type:类型的路径
+    		alias:别名
+    	 -->
+    	<!-- <typeAlias type="top.haoyeyin.pojo.Student" alias="student"/> -->
+    	<!-- 批量别名的定义
+    		指定package：mybatis会自动扫描指定包下的pojo类,bi
+    	 -->
+    	<package name="top.haoyeyin.pojo"/>
+    </typeAliases>
+<environments default="development">  
+        <environment id="development">  
+            <!-- 配置JDBC事务控制，由mybatis进行管理 -->  
+            <transactionManager type="JDBC"></transactionManager>  
+            <!-- 配置数据源，采用mybatis连接池 -->  
+            <dataSource type="POOLED">  
+                <property name="driver" value="${jdbc.driver}"/>  
+                <property name="url" value="${jdbc.url}" />  
+                <property name="username" value="${jdbc.username}"/>  
+                <property name="password" value="${jdbc.password}"/>  
+            </dataSource>  
+           
+        </environment>  
+    </environments>
+    <mappers>
+    	<!-- 通过mappe接口加载映射文件  -->
+    	<mapper resource="sqlmap/Student.xml"/>
+    	<!-- 通过resource方法一次加载一个配置文件 -->
+    	<!-- <mapper resource="sqlmap/StudentMapper.xml"/> -->
+    	<!-- 通过mappe接口加载单个映射文件
+    		遵循一些规范,将mapper接口的名称和mapper.xml映射文件名称保持一致，且放置在一个路径下
+    	 -->
+    	<!-- <mapper class="top.haoyeyin.mapper.StudentMapper"/> -->
+    	<!-- 自动扫描mapper包下的mapper接口加载多个映射文件
+    		  遵循一些规范,将mapper接口的名称和mapper.xml映射文件名称保持一致，且放置在一个路径下
+    	 -->
+    	<package name="top.haoyeyin.mapper"/>
+    </mappers>  
+ </configuration> 
+

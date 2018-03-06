@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?> 
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- namespace命名空间 ,作用对sql进行分类化管理，理解sql隔离,namespace等于mapper接口地址
+注意：使用mapper代理的方法进行开发，namespace具有特殊的意义
+-->
+<mapper namespace="top.haoyeyin.mapper.StudentMapper">
+	<!-- 用户信息综合查询 -->
+	<select id="findStudentList" parameterType="top.haoyeyin.pojo.StudentQueryVo" resultType="top.haoyeyin.pojo.StudentCustom">
+		 select * from student where student.sex=#{studentCustom.sex };
+	</select>
+	<!-- 映射文件中配置多种sql语句 -->
+	<!-- 通过select语句查询，id用于标识映射文件中的sql,所以id为statement的ID
+		 将来sql语句封装到mapperstatement对象中
+		 paramterType:指定输入参数类型，这里ID指定int型
+		 #{}:占位符
+		 #{id}:id表示输入的参数，id是参数名称，如果输入是简单类型#{}中的参数名可以任意，可以是
+		 value或其名称
+		 resultType:指定sql输出结果对应映射java对象，select指定的 resulType表示单条记录
+		 所映射的Java对象
+	 -->
+	<select id="findStudentById" parameterType="int" resultType="student">
+		 select * from student where id=#{value}
+	</select>
+	<!-- 根据用户名模糊查询用户信息 -->
+	<select id="findStudentByName" parameterType="java.lang.String" resultType="top.haoyeyin.pojo.Student">
+		select * from student where name like '%李%'
+	</select>
+	
+	<!-- 添加用户 
+		parameterType:指定输入是pojo(包括学生信息)
+		#{}中指定pojo的属性，接受pojo的属性值，MyBatis通过OGNL获取对象的属性值
+	-->
+	<insert id="insertStudent" parameterType="top.haoyeyin.pojo.Student">
+		insert into student(loginname,loginpass,name,sex)
+		 values(#{loginname},#{loginpass},#{name},#{sex});
+	</insert>
+	
+	<!-- 根据用户ID删除用户 -->
+	<delete id="deleteStudent" parameterType="java.lang.Integer">
+		delete from student where id=#{id}
+	</delete>
+	
+	<!-- 更新用户 
+		 分析：根据ID更新用户信息
+		需要传入ID
+		需要传入更新信息
+		ParameterType指定Student就包含ID及更新的信息
+	-->
+	<update id="updateStudent" parameterType="top.haoyeyin.pojo.Student">
+		update student set loginname=#{loginname},loginpass=#{loginpass},name=#{name},sex=#{sex} where id=#{id}
+	</update>
+</mapper>
